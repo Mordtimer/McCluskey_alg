@@ -1,9 +1,14 @@
 from BoolFunction import BoolFunction
+import sys
 
 
-class McCluesky():
+class McCluesky:
+    # Main loop agents
     @staticmethod
     def optimize(self):
+        if len(self._DNF[0]) == 0:
+            return "f(x) = 0"
+
         all_tabs = []
         current_vital_indexes_int = self._DNF[0] + self._DNF[1]
         current_vital_indexes = []
@@ -13,45 +18,70 @@ class McCluesky():
             current_vital_indexes.append([str(y)])
 
         sorted_tab = McCluesky._sortByHammingWeight(self._table, current_vital_indexes_int)
+        first_sorted_tab = sorted_tab
         sorted_tab = McCluesky._getNextStepTable(sorted_tab)
         indexes = McCluesky._removeUsedIndexes(sorted_tab, current_vital_indexes)
         current_vital_indexes = indexes[2]
+
+        # 1d table creating for all table list
+        sorted_tab_bis = []
+        for row in first_sorted_tab:
+            for element in row:
+                sorted_tab_bis.append(element)
+        all_tabs.append(sorted_tab_bis)
         all_tabs.append(sorted_tab)
-        # print(current_used_indexes)
-        # print(current_splited_idexes)
-        # print(current_vital_indexes)
+        del sorted_tab_bis
+        del first_sorted_tab
 
         while True:
-            # print("Next step: ")
             sorted_tab = McCluesky._repeatedSorting(sorted_tab)
             sorted_tab = McCluesky._getNextStepTable(sorted_tab)
             indexes = McCluesky._removeUsedIndexes(sorted_tab, current_vital_indexes)
             current_used_indexes = indexes[0]
-            current_splited_idexes = indexes[1]
+            # current_splited_idexes = indexes[1]
             current_vital_indexes = indexes[2]
-            # print(current_used_indexes)
-            # print(current_splited_idexes)
-            # print(current_vital_indexes)
-            # print("Hi")
             all_tabs.append(sorted_tab)
             if len(current_used_indexes) == 0:
                 break
 
-        McCluesky._lastStep(all_tabs, self._DNF, current_vital_indexes)
+        return McCluesky._lastStep(all_tabs, self._DNF, current_vital_indexes)
 
     @staticmethod
-    def _lastStep(tab, DNF, vital_indexes):
+    def _lastStep(tab, dnf, vital_indexes):
         final_tabs = []
         final_implicants = []
         for x in vital_indexes:
             final_tabs.append(McCluesky._find(tab, x))
-        # print(final_tabs)
-        for final_tab in final_tabs:
 
-            element = final_tab[len(final_tab)-1].split("i")
-            element.remove(element[len(element)-1])
+        # split index inf row into a list
+        for final_tab in final_tabs:
+            element = final_tab[len(final_tab) - 1].split("i")
+            element.remove(element[len(element) - 1])
             final_implicants.append(element)
-        print(final_implicants)
+
+        print("\nImplicants: ")
+        for x in final_tabs:
+            print(x)
+        # sort indexes values in final tabs
+        info_index = len(final_tabs[0]) - 1
+        for x in final_tabs:
+            x[info_index] = x[info_index].rstrip('i').split("i")
+            McCluesky.sortStringAsInt(x, info_index)
+
+        # sorting tables and implicants
+        McCluesky._bubbleSortByLastIndex(final_tabs, info_index)
+        McCluesky._removeFunctionValueAndInfo(final_tabs)
+        # McCluesky._removeLastIndex(final_tabs)
+        final_implicants = McCluesky._finalSorForImplicants(final_implicants)
+
+        # print("\nlista przekazywana jako implicantsArray")
+        # print(final_implicants)
+        # print("\nlista przekazywana jako binaryArray")
+        # for x in final_tabs:
+        #   print(x)
+
+        final_final = McCluesky._giveRelevantBinaryArrays(final_implicants, final_tabs, dnf[1])
+        return McCluesky._convertToPrettyFunction(final_final)
 
     @staticmethod
     def _find(tab_list, index):
@@ -61,18 +91,14 @@ class McCluesky():
                 for element in tab:
                     element1 = element.split("i")
                     element1.remove(element1[len(element1) - 1])
-                    #element1_int = []
-                    #print(sorted(element1))
-                    #print(sorted(index))
-                    #for x in element1:
-                        #element1_int.append(int(x))
+                    # element1_int = []
+                    # print(sorted(element1))
+                    # print(sorted(index))
+                    # for x in element1:
+                    # element1_int.append(int(x))
                     if sorted(element1) == sorted(index):
-                        print(tab)
+                        # print(tab)
                         return tab
-
-    @staticmethod
-    def _remDuplicates(mylist):
-        return list(dict.fromkeys(mylist))
 
     @staticmethod
     def _removeUsedIndexes(tab, vital):
@@ -111,16 +137,6 @@ class McCluesky():
                 for j in range(len(used_ones_full[i])):
                     used_ones_splited.append(used_ones_full[i][j])
 
-        # print(used_ones_splited)
-        """for i in range(len(used_ones_splited)):
-            for x in vital:
-                # print("splited: " + str(used_ones_splited[i]) + "vital: " + str(x))
-                if sorted(x) == sorted(used_ones_splited[i]):
-                    vital.remove(x)"""
-
-        # print("did it")
-        # print("VITAL Indexes")
-        # print(vital)
         for x in used_ones_full:
             vital.append(x)
 
@@ -157,11 +173,6 @@ class McCluesky():
         try:
             for (i) in range(len(sorted_tab) - 1):
 
-                """print("tab[i]:")
-                print(sorted_tab[i])
-                print("tab[i+1]:")
-                print(sorted_tab[i+1])
-                print("\n")"""
                 for j in range(len(sorted_tab[i])):
                     for k in range(len(sorted_tab[i + 1])):
                         if McCluesky._bitDifference(sorted_tab[i][j], sorted_tab[i + 1][k]) == 1:
@@ -175,23 +186,10 @@ class McCluesky():
                                 simple_implicant.append(sorted_tab[i][j][d])
                             simple_implicant.append(index_info)
                             simple_implicant[dif_index] = "_"
-                            """for x in simple_implicants:
-                                the_same = 0
-                                for z in range(len(x)-2):
-                                    if simple_implicant[z] == x[z]:
-                                        the_same += 1
-                                if the_same == len(x)-1:"""
-
                             simple_implicants.append(simple_implicant)
-                            """
-                            print(sorted_tab[i][j])
-                            print(sorted_tab[i+1][k])
-                            print(simple_implicant)
-                            print(index_info)"""
-
 
         except IndexError:
-            print("ERROR at j:" + str(j) + " k:" + str(k))
+            print("ERROR")
 
         if len(simple_implicants[0]) == 0:
             simple_implicants.remove(simple_implicants[0])
@@ -200,7 +198,11 @@ class McCluesky():
 
     @staticmethod
     def _repeatedSorting(tab):
-        el_in_row = len(tab[0])
+        el_in_row = 0
+        for x in tab:
+            if len(x) != 0:
+                el_in_row = len(x)
+                break
         sorted_tab = [[] for col in range(el_in_row + 1)]
         for row in tab:
             element = row
@@ -208,9 +210,9 @@ class McCluesky():
             sorted_tab[current_weight].append(element)
         return sorted_tab
 
+    # Prep-functions. Used for first iteration
     @staticmethod
     def _sortByHammingWeight(tab, vital_indexes_int):
-        how_much_rows = len(tab)
 
         el_in_row = len(tab[0])
         sorted_tab = [[] for col in range(el_in_row + 1)]
@@ -227,6 +229,38 @@ class McCluesky():
             sorted_tab.remove(sorted_tab[0])
         # print(sorted_tab)
         return sorted_tab
+
+    # Help me pls!
+    @staticmethod
+    def _finalSorForImplicants(implicants):
+
+        for implicant_str in implicants:
+            implicant_int = []
+            for element in implicant_str:
+                implicant_int.append(int(element))
+            implicant_int = sorted(implicant_int)
+            implicant_str = []
+            for element in implicant_int:
+                implicant_str.append(str(element))
+        return implicants
+
+    @staticmethod
+    def _bubbleSortByLastIndex(list_of_lists, index):
+        n = len(list_of_lists)
+        for i in range(n):
+            for j in range(0, n - 1):
+                if len(list_of_lists[j][index]) > len(list_of_lists[j + 1][index]):
+                    list_of_lists[j], list_of_lists[j + 1] = list_of_lists[j], list_of_lists[j + 1]
+                elif len(list_of_lists[j][index]) == len(list_of_lists[j + 1][index]):
+                    leng = len(list_of_lists[j][index])
+                    for k in range(leng):
+                        if int(list_of_lists[j][index][k]) > int(list_of_lists[j + 1][index][k]):
+                            list_of_lists[j], list_of_lists[j + 1] = list_of_lists[j + 1], list_of_lists[j]
+
+    @staticmethod
+    def _removeFunctionValueAndInfo(list_of_lists):
+        for x in list_of_lists:
+            del x[-2:]
 
     @staticmethod
     def _getHammingWeight(row, el_in_row):
@@ -254,11 +288,82 @@ class McCluesky():
                 index = i
         return index
 
+    @staticmethod
+    def sortStringAsInt(row, info_index):
+        temp_int = []
+        for str_el in row[info_index]:
+            temp_int.append(int(str_el))
+            temp_int = sorted(temp_int)
+        row[info_index] = []
+        for int_el in temp_int:
+            row[info_index].append(str(int_el))
 
-function1 = BoolFunction("bool4.txt", "f")
-function2 = BoolFunction("bool2.txt", "g")
-function3 = BoolFunction("bool3.txt", "h")
+    @staticmethod
+    def _giveRelevantBinaryArrays(implicants_array, binary_array, dont_care=None):
+        if dont_care is None:
+            dont_care = []
+        digits = []
+        number_of_digits = []
+        binary_arrays_to_final_function = []
+        implicants_arrays_to_final_function = []
+
+        for imp in implicants_array:
+            for digit in imp:
+                if digit in digits:
+                    index = digits.index(digit)
+                    number_of_digits[index] += 1
+                else:
+                    digits.append(digit)
+                    number_of_digits.append(1)
+
+        for i in range(0, len(implicants_array)):
+            for digit in implicants_array[i]:
+                index = digits.index(digit)
+                if number_of_digits[index] == 1 and digit not in dont_care:
+                    binary_arrays_to_final_function.append(binary_array[i])
+                    implicants_arrays_to_final_function.append(implicants_array[i])
+                    break
+
+        for i in range(0, len(digits)):
+            connected = McCluesky._connectArrays(implicants_arrays_to_final_function)
+            if digits[i] not in connected and digits[i] not in dont_care:
+                missing_digit = digits[i]
+                for how_many in range(0, len(implicants_array)):
+                    if implicants_array[how_many] not in implicants_arrays_to_final_function and missing_digit in implicants_array[how_many]:
+                        implicants_arrays_to_final_function.append(implicants_array[how_many])
+                        binary_arrays_to_final_function.append(binary_array[how_many])
+                        missing_digit = "$"
+
+        return binary_arrays_to_final_function
+
+    @staticmethod
+    def _connectArrays(array):
+        new = []
+        for i in array:
+            for j in i:
+                new.append(j)
+        return new
+
+    @staticmethod
+    def _convertToPrettyFunction(binary_arrays, function_name="f"):
+        function = function_name + " = "
+        attributes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+
+        for j in range(0, len(binary_arrays)):
+            bin_arr = binary_arrays[j]
+            for i in range(0, len(bin_arr)):
+                if bin_arr[i] != '_':
+                    function += attributes[i]
+                    if bin_arr[i] == '0':
+                        function += '\''
+            if j != len(binary_arrays) - 1:
+                function += " + "
+
+        return function
+
+
+print("\n")
+function1 = BoolFunction(sys.argv[1])
 function1.showDNF()
-McCluesky.optimize(function1)
-
-#McCluesky.optimize(function2)
+result = McCluesky.optimize(function1)
+print("\n" + result + "\n")
